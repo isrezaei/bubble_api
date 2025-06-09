@@ -1,0 +1,8 @@
+model Users {
+  id        String   @id(map: "PK__Users__3213E83FBC471F92") @db.NVarChar(191)
+  email     String   @unique(map: "UQ__Users__AB6E6164E342DFF5") @db.NVarChar(191)
+  phone     String?  @unique(map: "UQ__Users__B43B145F885450A3") @db.NVarChar(191)
+  username  String?  @db.NVarChar(191)
+  createdAt DateTime @default(dbgenerated("sysutcdatetime()"), map: "DF__Users__createdAt__3F466844")
+  goals     Goals[]
+}

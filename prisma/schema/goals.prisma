@@ -1,0 +1,10 @@
+model Goals {
+  id          String    @id(map: "PK__Goals__3213E83F7B4FB029") @db.NVarChar(191)
+  userId      String?   @db.NVarChar(191)
+  title       String    @db.NVarChar(191)
+  description String?   @db.NVarChar(191)
+  createdAt   DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF__Goals__createdAt__37A5467C")
+  updatedAt   DateTime?
+  user        Users?    @relation(fields: [userId], references: [id], map: "FK_Goals_Users_userId")
+  tasks       Tasks[]
+}

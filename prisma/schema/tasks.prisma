@@ -1,0 +1,15 @@
+model Tasks {
+  id          String    @id(map: "PK__Tasks__3213E83F91FA5A08") @db.NVarChar(191)
+  goalId      String    @db.NVarChar(191)
+  title       String    @db.NVarChar(191)
+  description String?   @db.NVarChar(191)
+  planned     Int?
+  real        Int?
+  deadline    DateTime
+  weight      Int
+  remind      Int?
+  status      String    @db.NVarChar(191)
+  createdAt   DateTime  @default(dbgenerated("sysutcdatetime()"), map: "DF__Tasks__createdAt__3A81B327")
+  updatedAt   DateTime?
+  goal        Goals     @relation(fields: [goalId], references: [id], onDelete: Cascade, map: "FK_Tasks_Goals_goalId")
+}
