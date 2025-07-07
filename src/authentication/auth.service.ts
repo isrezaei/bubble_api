@@ -1,118 +1,45 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
-import { find } from 'lodash';
 import { compare, hash } from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
-
-const core_users = [
-  {
-    id: 1,
-    user_name: 'farazmand',
-    email: 'x@yahoo.com',
-    password: '$2b$12$4VLmUXLu6V/bpSPjrNttEOrx5cqyH8SfkUN97dkeAS.p7Qkcy9og.',
-    role_id: 3,
-  },
-  {
-    id: 2,
-    user_name: 'jafari',
-    email: 'y@yahoo.com',
-    password: '$2b$12$2Hk3HQXp2hPKsS/9T6Ky.exMxDXJjOsbdP/l1oS0scS7S.Mwc3aoy',
-    role_id: 3,
-  },
-  {
-    id: 2,
-    user_name: 'rahimian',
-    email: 'z@yahoo.com',
-    password: '$2b$12$0MP.yGpUSSd0bkctV/2kt.ZoyNq3Fp1oeUANxeH0scQNUIi.0QKwG',
-    role_id: 3,
-  },
-  {
-    id: 4,
-    user_name: 'laleh',
-    email: 'npc@yahoo.com',
-    password: '$2b$12$s7T/5R7SqQ4vZ1Z6a0SlTe9L3mBfsgCtPxTWfjCgw9C5BV3hd7iAu',
-    role_id: 4,
-  },
-];
+import { PrismaService } from '../prisma/prisma.service';
+import { QuerySchemaService } from '../../utils/querySchema.util';
+import resSuccess from '../../utils/resSuccess';
+import { resReject } from '../../utils/resReject';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly envConfig: ConfigService,
+    private readonly prisma: PrismaService,
+    private readonly querySchema: QuerySchemaService,
   ) {}
 
-  async register(res: Response, dto: RegisterDto) {
+  async access_code() {
     try {
-      //*Check Exist Logic
-      const existUser = {
-        by_username: find(core_users, { user_name: dto.user_name }),
-        by_email: find(core_users, { email: dto.email }),
-      };
-
-      console.log(existUser);
-
-      if (existUser.by_email || existUser.by_username) {
-        return {
-          message: `user with this role : ${dto.role} already exists`,
-          statusCode: HttpStatus.CONFLICT,
-        };
-      }
-      //*Check Exist Logic
-
-      //? Create new user with Specific role
-
-      const newUser = {
-        user_name: dto.user_name,
-        email: dto.email,
-        password: await hash(dto.password, 12),
-        role_id: dto.role_id,
-      };
-
-      const createUser = [...core_users, newUser];
-
-      //! Dd InputParam
-
       const inputParam = {
-        execution: 'retrieve_auth',
-        user_id: 5, //!---> ?,
-        request: {
-          item: [newUser],
-        },
+        execution: 'get_accessCode',
+        user_id: null,
+        request: null,
       };
 
-      //? Create new user with Specific role
+      const { result } = await this.querySchema.queryRaw({ inputParam });
 
-      const payload = {
-        sub: '---', //! IDK
-        email: dto.email,
-        role_id: dto.role_id,
-      };
-
-      const JsonWebToken = this.jwtService.sign(payload, {
-        secret: this.envConfig.get('JWT_SECRET'),
-        expiresIn: '7d', // انقضای ۷ روزه
-      });
-
-      res.cookie(dto.role, JsonWebToken, {
-        httpOnly: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 روز
-        sameSite: 'lax', // یا 'strict' یا 'none' (برای کراس‌دومین)
-        secure: false, // روی HTTPS true باشه
-      });
+      console.log(result);
 
       return {
-        fakeData: createUser,
-        message: `user with this role : ${dto.role} submit successfully`,
+        result,
+        message: 'successfully getting data in /auth/access_code',
         statusCode: HttpStatus.OK,
       };
     } catch (e) {
       console.log(e);
       throw new HttpException(
         {
-          message: `user with this role : ${dto.role} submit failed`,
+          message: `Something wrong in getting data in /auth/access_code`,
           statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         },
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -120,68 +47,41 @@ export class AuthService {
     }
   }
 
-  async login(res: Response, dto: LoginDto) {
+  async register(res: Response, dto: RegisterDto) {
     try {
-      const newLogin = {
-        user_name: dto.user_name,
-        email: dto.email,
-        password: await hash(dto.password, 12),
-        role_id: dto.role_id,
-      };
-
-      //*Login Logs
       const inputParam = {
-        execution: 'login_log',
-        user_id: 5, //!---> ?,
+        execution: 'register_user',
+        user_id: null,
         request: {
-          item: [newLogin],
+          item: [
+            {
+              username: dto.username,
+              phone: dto.phone,
+              password: await hash(dto.password, 12),
+              role_id: dto.role_id,
+            },
+          ],
         },
       };
-      //*Login Logs
 
-      //*Check Exist In Db and find it
+      const { result } = await this.querySchema.queryRaw({ inputParam });
 
-      //> این دو مقدار باید به عتوان اینپوت پارمز به پراستیژر ارسال شن.
-      const existUser = {
-        by_username: find(core_users, { user_name: dto.user_name }),
-        by_email: find(core_users, { email: dto.email }),
-      };
-
-      if (!existUser.by_email && !existUser.by_username) {
-        return {
-          message: `user with this data not register`,
-          statusCode: HttpStatus.NOT_FOUND,
-        };
-      }
-      //*Check Exist In Db and find it
-
-      console.log(existUser);
-
-      //* Check password
-
-      const checkPassword_byUsername = await compare(
-        dto.password,
-        existUser?.by_username?.password || '',
-      );
-      const checkPassword_byEmail = await compare(
-        dto.password,
-        existUser?.by_email?.password || '',
-      );
-
-      if (!checkPassword_byUsername && !checkPassword_byEmail) {
-        return {
-          message: 'password or email is not valid pls try again',
-          statusCode: HttpStatus.NOT_FOUND,
-        };
+      if (result.code === 409) {
+        throw new HttpException(
+          {
+            message: {
+              english: `user with this role: ${dto.role} already exists`,
+              persian: 'کاربر با مشخصات وارد شده ثبت نام شده است',
+            },
+            statusCode: HttpStatus.CONFLICT,
+          },
+          HttpStatus.CONFLICT,
+        );
       }
 
-      //* Check password
-
-      //* Create Token
       const payload = {
-        sub: '---', //! IDK
-        email: dto.email,
-        role_id: dto.role_id,
+        sub: result.item.user_id,
+        rl: result.item.role_id,
       };
 
       const JsonWebToken = this.jwtService.sign(payload, {
@@ -192,26 +92,131 @@ export class AuthService {
       res.cookie(dto.role, JsonWebToken, {
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 روز
-        sameSite: 'lax', // یا 'strict' یا 'none' (برای کراس‌دومین)
+        sameSite: 'strict', // یا 'strict' یا 'none' (برای کراس‌دومین)
         secure: false, // روی HTTPS true باشه
       });
 
-      //* Create Token
-
-      return {
-        fakeData: dto,
-        message: `login was successful for ${dto.email}`,
+      return resSuccess({
+        result: null,
+        path: '/auth/register',
+        message: {
+          english: `registration was successful`,
+          persian: 'ثبت نام با موفقیت انجام شد',
+        },
         statusCode: HttpStatus.OK,
-      };
+      });
     } catch (e) {
       console.log(e);
-      throw new HttpException(
-        {
-          message: `something is wrong in auth/login`,
-          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+      //prettier-ignore
+
+      resReject({
+        statusCode : e.response.statusCode,
+        message : {
+          english : e.response.message.english,
+          persian : e.response.message.persian
         },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+        path : "/auth/register"
+      })
+    }
+  }
+
+  async login(res: Response, dto: LoginDto) {
+    try {
+      const inputParam = {
+        execution: 'login_user',
+        user_id: null,
+        request: {
+          phone: dto.phone,
+          password: await hash(dto.password, 12),
+          role_id: dto.role_id,
+        },
+      };
+
+      const { result } = await this.querySchema.queryRaw({ inputParam });
+
+      console.log(result);
+
+      if (result.code === 409) {
+        throw new HttpException(
+          {
+            message: {
+              english: 'Incorrect phone or password. Please try again',
+              persian: 'شماره تلفن یا رمز عبور اشتباه است',
+            },
+            statusCode: HttpStatus.UNAUTHORIZED,
+          },
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      const comparePass = await compare(dto?.password, result?.item?.password);
+
+      if (!comparePass) {
+        throw new HttpException(
+          {
+            message: {
+              english: 'Incorrect phone or password. Please try again',
+              persian: 'شماره تلفن یا رمز عبور اشتباه است',
+            },
+            statusCode: HttpStatus.UNAUTHORIZED,
+          },
+          HttpStatus.UNAUTHORIZED,
+        );
+      }
+
+      console.log(result);
+
+      const payload = {
+        sub: result.item.user_id,
+        rl: result.item.role_id,
+      };
+
+      const JsonWebToken = this.jwtService.sign(payload, {
+        secret: this.envConfig.get('JWT_SECRET'),
+        expiresIn: '7d', // انقضای ۷ روزه
+      });
+
+      res.cookie(dto.role, JsonWebToken, {
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 روز
+        sameSite: 'lax',
+        secure: false,
+      });
+
+      return resSuccess({
+        path: '/auth/login',
+        message: {
+          english: 'Login was successful',
+          persian: 'ورود با موفقیت انجام شد.',
+        },
+        statusCode: HttpStatus.OK,
+        result,
+      });
+    } catch (error) {
+      console.log(error);
+      resReject({
+        path: '/auth/login',
+        message: {
+          english: error.response.message.english,
+          persian: error.response.message.persian,
+        },
+        statusCode: error.response.statusCode,
+      });
+    }
+  }
+
+  async session(request: Request) {
+    try {
+      const user = request.user;
+      return resSuccess({
+        path: '/auth/session',
+        result: user,
+      });
+    } catch (e) {
+      console.log(e);
+      resReject({
+        path: '/auth/session',
+      });
     }
   }
 }

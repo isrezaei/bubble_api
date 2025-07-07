@@ -62,7 +62,8 @@ export class ShokrgozariController {
 
       const result = await this.prisma.$queryRaw`
         DECLARE @outputparam NVARCHAR(MAX);
-        EXEC dbo.api_interface @inputparam = ${dtoCore}, @outputparam = @outputparam OUTPUT;
+        EXEC dbo.api_interface @inputparam = ${dtoCore},
+        @outputparam = @outputparam OUTPUT;
         SELECT @outputparam AS outputParamResult;
       `;
 

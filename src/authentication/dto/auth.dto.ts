@@ -1,5 +1,4 @@
 import {
-  IsEmail,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -17,13 +16,19 @@ enum Role {
 export class RegisterDto {
   @IsString()
   @IsNotEmpty()
-  user_name: string;
+  username: string;
 
-  @IsEmail()
-  @IsNotEmpty()
-  email: string;
+  // @IsEmail()
+  // @IsOptional()
+  // @IsNotEmpty()
+  // email: string;
 
   @IsString()
+  @IsOptional()
+  phone: number;
+
+  @IsString()
+  @IsOptional()
   @IsNotEmpty()
   password: string;
 
@@ -35,15 +40,19 @@ export class RegisterDto {
 }
 
 export class LoginDto {
-  @IsString()
-  @IsNotEmpty()
-  @IsOptional()
-  user_name?: string;
+  // @IsString()
+  // @IsNotEmpty()
+  // @IsOptional()
+  // username?: string;
+  //
+  // @IsEmail()
+  // @IsNotEmpty()
+  // @IsOptional()
+  // email?: string;
 
-  @IsEmail()
   @IsNotEmpty()
-  @IsOptional()
-  email?: string;
+  @IsString()
+  phone: string;
 
   @IsString()
   password: string;
